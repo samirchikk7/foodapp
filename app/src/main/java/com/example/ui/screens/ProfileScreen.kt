@@ -38,6 +38,21 @@ fun ProfileScreen(
     val deliveryAddress by viewModel.deliveryAddress.collectAsState()
     val userBalance by viewModel.userBalance.collectAsState()
     val loyaltyPoints by viewModel.loyaltyPoints.collectAsState()
+    val authState by viewModel.authState.collectAsState()
+
+    val userName = when (val state = authState) {
+        is com.example.ui.viewmodel.AuthState.Authenticated -> state.name
+        else -> "Самир Мусабалиев"
+    }
+    val userEmail = when (val state = authState) {
+        is com.example.ui.viewmodel.AuthState.Authenticated -> state.email
+        else -> "samir.musabaliev@example.com"
+    }
+    val userInitials = userName.split(" ")
+        .filter { it.isNotBlank() }
+        .take(2)
+        .map { it.first().uppercase() }
+        .joinToString("")
 
     var addressInput by remember { mutableStateOf(deliveryAddress) }
     var showAddressSavedSnackbar by remember { mutableStateOf(false) }
@@ -59,38 +74,52 @@ fun ProfileScreen(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Text(
-                        text = "СМ",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(60.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (userInitials.isEmpty()) "СМ" else userInitials,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.White
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Column {
+                        Text(
+                            text = userName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = userEmail,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column {
-                    Text(
-                        text = "Самир Мусабалиев",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "samir.musabaliev@example.com",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
-                        fontWeight = FontWeight.Medium
-                    )
+                // Sign Out Action Button
+                IconButton(
+                    onClick = { viewModel.signOut() },
+                    modifier = Modifier.testTag("sign_out_button")
+                ) {
+                    Text(text = "🚪", fontSize = 22.sp)
                 }
             }
         }

@@ -23,10 +23,18 @@ enum class GroceryTab {
     CATALOG, CART, ORDERS, PROFILE
 }
 
+sealed interface AuthState {
+    object Unauthenticated : AuthState
+    object Loading : AuthState
+    data class Authenticated(val email: String, val name: String, val token: String, val role: String) : AuthState
+    data class Error(val message: String) : AuthState
+}
+
 class GroceryViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: GroceryRepository
     private val prefs = application.getSharedPreferences("grocery_prefs", Context.MODE_PRIVATE)
+    private val authService = com.example.data.api.AuthService(null)
 
     val cartItems: StateFlow<List<CartEntity>>
     val orders: StateFlow<List<OrderEntity>>
@@ -55,9 +63,111 @@ class GroceryViewModel(application: Application) : AndroidViewModel(application)
     private val _loyaltyPoints = MutableStateFlow(prefs.getInt("loyalty_points", 150))
     val loyaltyPoints: StateFlow<Int> = _loyaltyPoints.asStateFlow()
 
+    // Secure Authentication State Flows
+    private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
+    val authState: StateFlow<AuthState> = _authState.asStateFlow()
+
+    // Secure Authentication Methods
+    fun signIn(email: String, password: String, onDone: (Boolean, String?) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            _authState.value = AuthState.Loading
+            when (val res = authService.authenticateUser(email, password)) {
+                is com.example.data.api.AuthResult.Success -> {
+                    _authState.value = AuthState.Authenticated(res.email, res.fullName, res.token, res.role)
+                    prefs.edit()
+                        .putString("auth_email", res.email)
+                        .putString("auth_name", res.fullName)
+                        .putString("auth_token", res.token)
+                        .putString("auth_role", res.role)
+                        .apply()
+                    onDone(true, null)
+                }
+                is com.example.data.api.AuthResult.Failure -> {
+                    _authState.value = AuthState.Error(res.message)
+                    onDone(false, res.message)
+                }
+            }
+        }
+    }
+
+    fun signUp(email: String, password: String, fullName: String, onDone: (Boolean, String?) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            _authState.value = AuthState.Loading
+            when (val res = authService.registerUser(email, password, fullName)) {
+                is com.example.data.api.AuthResult.Success -> {
+                    _authState.value = AuthState.Authenticated(res.email, res.fullName, res.token, res.role)
+                    prefs.edit()
+                        .putString("auth_email", res.email)
+                        .putString("auth_name", res.fullName)
+                        .putString("auth_token", res.token)
+                        .putString("auth_role", res.role)
+                        .apply()
+                    onDone(true, null)
+                }
+                is com.example.data.api.AuthResult.Failure -> {
+                    _authState.value = AuthState.Error(res.message)
+                    onDone(false, res.message)
+                }
+            }
+        }
+    }
+
+    fun signInWithGoogle(onDone: (Boolean, String?) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            _authState.value = AuthState.Loading
+            when (val res = authService.authenticateWithGoogle("simulated-google-token")) {
+                is com.example.data.api.AuthResult.Success -> {
+                    _authState.value = AuthState.Authenticated(res.email, res.fullName, res.token, res.role)
+                    prefs.edit()
+                        .putString("auth_email", res.email)
+                        .putString("auth_name", res.fullName)
+                        .putString("auth_token", res.token)
+                        .putString("auth_role", res.role)
+                        .apply()
+                    onDone(true, null)
+                }
+                is com.example.data.api.AuthResult.Failure -> {
+                    _authState.value = AuthState.Error(res.message)
+                    onDone(false, res.message)
+                }
+            }
+        }
+    }
+
+    fun clearAuthError() {
+        if (_authState.value is AuthState.Error) {
+            _authState.value = AuthState.Unauthenticated
+        }
+    }
+
+    fun signOut() {
+        _authState.value = AuthState.Unauthenticated
+        prefs.edit()
+            .remove("auth_email")
+            .remove("auth_name")
+            .remove("auth_token")
+            .remove("auth_role")
+            .apply()
+        com.example.data.api.AuthPreferences.clearSession()
+    }
+
     init {
         val database = AppDatabase.getDatabase(application)
         repository = GroceryRepository(database.groceryDao())
+
+        // Load credentials on cold-start
+        val savedEmail = prefs.getString("auth_email", null)
+        val savedName = prefs.getString("auth_name", null)
+        val savedToken = prefs.getString("auth_token", null)
+        val savedRole = prefs.getString("auth_role", "user")
+
+        if (savedEmail != null && savedName != null && savedToken != null) {
+            val role = savedRole ?: "user"
+            _authState.value = AuthState.Authenticated(savedEmail, savedName, savedToken, role)
+            com.example.data.api.AuthPreferences.saveSession(savedToken, role)
+        } else {
+            _authState.value = AuthState.Unauthenticated
+        }
         
         cartItems = repository.cartItems.stateIn(
             scope = viewModelScope,
