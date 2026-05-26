@@ -1,0 +1,6 @@
+{
+  "name": "Доставка Продуктов",
+  "description": "Приложение для заказа и доставки свежих продуктов питания на дом.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
