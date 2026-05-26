@@ -5,7 +5,18 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [CartEntity::class, OrderEntity::class], version = 2, exportSchema = false)
+@Database(
+    entities = [
+        CartEntity::class,
+        OrderEntity::class,
+        ProductEntity::class,
+        RecipeEntity::class,
+        RecipeIngredientEntity::class,
+        OrderItemEntity::class
+    ],
+    version = 3,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun groceryDao(): GroceryDao
 

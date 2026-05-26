@@ -45,6 +45,7 @@ fun CatalogScreen(
     viewModel: GroceryViewModel,
     modifier: Modifier = Modifier
 ) {
+    val dbProducts by viewModel.products.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val cartItems by viewModel.cartItems.collectAsState()
@@ -52,12 +53,13 @@ fun CatalogScreen(
 
     val categories = listOf("Все", "Овощи и Фрукты", "Молоко и Яйца", "Хлеб и Выпечка", "Мясо и Птица", "Зелень", "Напитки")
 
-    // Filter products based on category and search query
-    val filteredProducts = PREDEFINED_PRODUCTS.filter { product ->
+    // Filter products based on category, search query, and availability
+    val filteredProducts = dbProducts.filter { product ->
         val matchesCategory = selectedCategory == "Все" || product.category == selectedCategory
         val matchesSearch = product.name.contains(searchQuery, ignoreCase = true) ||
                 product.description.contains(searchQuery, ignoreCase = true)
-        matchesCategory && matchesSearch
+        val matchesAvailability = product.isAvailable
+        matchesCategory && matchesSearch && matchesAvailability
     }
 
     Column(
@@ -338,6 +340,8 @@ fun ProductCard(
     onProductDetailClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isOutOfStock = product.stockStatus == "OUT_OF_STOCK"
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -345,7 +349,7 @@ fun ProductCard(
             .testTag("product_card_${product.id}"),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = if (isOutOfStock) Color(0xFFFAFAFA) else Color.White
         ),
         border = androidx.compose.foundation.BorderStroke(1.dp, SleekBorderLight),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -367,8 +371,51 @@ fun ProductCard(
                 Text(
                     text = product.emoji,
                     fontSize = 48.sp,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    color = if (isOutOfStock) Color.LightGray else Color.Unspecified
                 )
+
+                // Structured Badges over image (top-start)
+                if (product.badges.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        product.badges.take(2).forEach { badge ->
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        color = when(badge) {
+                                            "PREMIUM" -> Color(0xFF1E1E1E)
+                                            "BEST_PRICE" -> Color(0xFFFF9800)
+                                            "NEW" -> Color(0xFF2196F3)
+                                            "TOP_SELLER" -> Color(0xFFFFC107)
+                                            "LOCAL" -> Color(0xFF4CAF50)
+                                            else -> Color(0xFF8BC34A) // ORGANIC
+                                        },
+                                        shape = RoundedCornerShape(6.dp)
+                                    )
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = when(badge) {
+                                        "PREMIUM" -> "PREM"
+                                        "BEST_PRICE" -> "%"
+                                        "NEW" -> "NEW"
+                                        "TOP_SELLER" -> "🔥"
+                                        "LOCAL" -> "🏡"
+                                        else -> "БИО"
+                                    },
+                                    color = Color.White,
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                            }
+                        }
+                    }
+                }
 
                 // Rating Badge
                 Row(
@@ -404,7 +451,7 @@ fun ProductCard(
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = SleekOnSurface,
+                color = if (isOutOfStock) Color.Gray else SleekOnSurface,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -425,19 +472,66 @@ fun ProductCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "${product.price.toInt()} ₽",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Black,
-                    color = SleekPrimary
-                )
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "${product.price.toInt()} ₽",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Black,
+                            color = if (isOutOfStock) Color.Gray else SleekPrimary
+                        )
+                        if (product.oldPrice != null) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "${product.oldPrice.toInt()} ₽",
+                                fontSize = 11.sp,
+                                color = Color.Gray,
+                                textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
+                            )
+                        }
+                    }
+
+                    if (product.stockStatus == "LOW_STOCK") {
+                        Text(
+                            text = "Осталось мало",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFF57C00)
+                        )
+                    } else if (isOutOfStock) {
+                        Text(
+                            text = "Нет на складе",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Red
+                        )
+                    }
+                }
 
                 // Add or counter action container
                 Box(
                     modifier = Modifier.size(width = 80.dp, height = 34.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (quantityInCart == 0) {
+                    if (isOutOfStock) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFFEEEEEE),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Ожидается",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                    } else if (quantityInCart == 0) {
                         Button(
                             onClick = onAddClick,
                             modifier = Modifier

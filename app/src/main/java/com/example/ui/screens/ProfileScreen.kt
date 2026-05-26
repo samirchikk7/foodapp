@@ -48,6 +48,10 @@ fun ProfileScreen(
         is com.example.ui.viewmodel.AuthState.Authenticated -> state.email
         else -> "samir.musabaliev@example.com"
     }
+    val role = when (val state = authState) {
+        is com.example.ui.viewmodel.AuthState.Authenticated -> state.role
+        else -> "customer"
+    }
     val userInitials = userName.split(" ")
         .filter { it.isNotBlank() }
         .take(2)
@@ -111,6 +115,19 @@ fun ProfileScreen(
                             color = Color.Gray,
                             fontWeight = FontWeight.Medium
                         )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (role == "admin") Color.Red.copy(alpha = 0.1f) else Color(0xFFE8F5E9)
+                        ) {
+                            Text(
+                                text = if (role == "admin") "Администратор 🛠️" else "Покупатель 🛒",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (role == "admin") Color.Red else Color(0xFF2E7D32),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                 }
 
@@ -121,6 +138,49 @@ fun ProfileScreen(
                 ) {
                     Text(text = "🚪", fontSize = 22.sp)
                 }
+            }
+        }
+
+        // Sandbox Role Switcher Card
+        Card(
+            modifier = Modifier.fillMaxWidth().testTag("sandbox_role_switcher_card"),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEE))
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Text(text = "🛡️", fontSize = 20.sp)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Режим тестирования",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Коснуться для входа под STORE_ADMIN",
+                            fontSize = 10.sp,
+                            color = Color.Gray
+                        )
+                    }
+                }
+                Switch(
+                    checked = role == "admin",
+                    onCheckedChange = {
+                        viewModel.toggleUserRole()
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.Red,
+                        checkedTrackColor = Color.Red.copy(alpha = 0.2f)
+                    ),
+                    modifier = Modifier.testTag("role_switcher_switch")
+                )
             }
         }
 

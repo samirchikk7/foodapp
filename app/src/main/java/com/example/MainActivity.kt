@@ -16,6 +16,10 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.RestaurantMenu
+import com.example.ui.screens.RecipesScreen
+import com.example.ui.screens.AdminDashboardScreen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -171,7 +175,7 @@ class MainActivity : ComponentActivity() {
                                     NavigationBarItem(
                                         selected = currentTab == GroceryTab.CATALOG,
                                         onClick = { viewModel.setTab(GroceryTab.CATALOG) },
-                                        label = { Text("Каталог", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                                        label = { Text("Каталог", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
                                         icon = {
                                             Icon(
                                                 imageVector = Icons.Default.Search,
@@ -181,11 +185,25 @@ class MainActivity : ComponentActivity() {
                                         modifier = Modifier.testTag("tab_catalog")
                                     )
 
+                                    // Recipes Tab
+                                    NavigationBarItem(
+                                        selected = currentTab == GroceryTab.RECIPES,
+                                        onClick = { viewModel.setTab(GroceryTab.RECIPES) },
+                                        label = { Text("Рецепты", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
+                                        icon = {
+                                            Icon(
+                                                imageVector = Icons.Default.RestaurantMenu,
+                                                contentDescription = "Recipes"
+                                            )
+                                        },
+                                        modifier = Modifier.testTag("tab_recipes")
+                                    )
+
                                     // Cart Tab (with badges showing selected items quantity)
                                     NavigationBarItem(
                                         selected = currentTab == GroceryTab.CART,
                                         onClick = { viewModel.setTab(GroceryTab.CART) },
-                                        label = { Text("Корзина", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                                        label = { Text("Корзина", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
                                         icon = {
                                             BadgedBox(
                                                 badge = {
@@ -215,7 +233,7 @@ class MainActivity : ComponentActivity() {
                                     NavigationBarItem(
                                         selected = currentTab == GroceryTab.ORDERS,
                                         onClick = { viewModel.setTab(GroceryTab.ORDERS) },
-                                        label = { Text("Заказы", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                                        label = { Text("Заказы", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
                                         icon = {
                                             Icon(
                                                 imageVector = Icons.Default.Assignment,
@@ -229,7 +247,7 @@ class MainActivity : ComponentActivity() {
                                     NavigationBarItem(
                                         selected = currentTab == GroceryTab.PROFILE,
                                         onClick = { viewModel.setTab(GroceryTab.PROFILE) },
-                                        label = { Text("Профиль", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                                        label = { Text("Профиль", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
                                         icon = {
                                             Icon(
                                                 imageVector = Icons.Default.Person,
@@ -238,6 +256,22 @@ class MainActivity : ComponentActivity() {
                                         },
                                         modifier = Modifier.testTag("tab_profile")
                                     )
+
+                                    // Admin Tab (Only if admin role)
+                                    if (state.role == "admin") {
+                                        NavigationBarItem(
+                                            selected = currentTab == GroceryTab.ADMIN,
+                                            onClick = { viewModel.setTab(GroceryTab.ADMIN) },
+                                            label = { Text("Админ", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
+                                            icon = {
+                                                Icon(
+                                                    imageVector = Icons.Default.Shield,
+                                                    contentDescription = "Admin"
+                                                )
+                                            },
+                                            modifier = Modifier.testTag("tab_admin")
+                                        )
+                                    }
                                 }
                             }
                         ) { innerPadding ->
@@ -249,9 +283,11 @@ class MainActivity : ComponentActivity() {
                             ) { tabState ->
                                 when (tabState) {
                                     GroceryTab.CATALOG -> CatalogScreen(viewModel = viewModel)
+                                    GroceryTab.RECIPES -> RecipesScreen(viewModel = viewModel)
                                     GroceryTab.CART -> CartScreen(viewModel = viewModel)
                                     GroceryTab.ORDERS -> OrdersScreen(viewModel = viewModel)
                                     GroceryTab.PROFILE -> ProfileScreen(viewModel = viewModel)
+                                    GroceryTab.ADMIN -> AdminDashboardScreen(viewModel = viewModel)
                                 }
                             }
 

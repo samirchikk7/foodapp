@@ -17,34 +17,41 @@ import java.util.concurrent.TimeUnit
  */
 object NetworkModule {
 
-    private const val BASE_URL = "https://your-supabase-project-id.supabase.co/rest/v1/"
-    private const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." // Loaded dynamically in prod
+    private fun getBaseUrl(): String {
+        return try {
+            com.example.BuildConfig.SUPABASE_URL.takeIf { it.isNotBlank() && !it.startsWith("MY_") }
+                ?: "https://your-supabase-project-id.supabase.co/rest/v1/"
+        } catch (e: Exception) {
+            "https://your-supabase-project-id.supabase.co/rest/v1/"
+        }
+    }
+
+    private fun getSupabaseAnonKey(): String {
+        return try {
+            com.example.BuildConfig.SUPABASE_ANON_KEY.takeIf { it.isNotBlank() && !it.startsWith("MY_") }
+                ?: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        } catch (e: Exception) {
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        }
+    }
 
     private val moshi: Moshi = Moshi.Builder()
         .addLast(KotlinJsonAdapterFactory())
         .build()
 
-    /**
-     * Reusable logging utility keeping network traffic visible during staging/development
-     * while silencing sensitive auth payloads on release builds.
-     */
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    /**
-     * Interceptor responsible for stamping requests with correlation IDs, Auth JWT tokens, 
-     * Content types, and user agent tags essential for logging, rate limiting, and analytics.
-     */
     private val authAndHeaderInterceptor = object : Interceptor {
         @Throws(IOException::class)
         override fun intercept(chain: Interceptor.Chain): Response {
             val originalRequest = chain.request()
-            val token = AuthPreferences.getAuthToken() ?: SUPABASE_ANON_KEY
+            val token = AuthPreferences.getAuthToken() ?: getSupabaseAnonKey()
             
             val authenticatedRequest = originalRequest.newBuilder()
                 .header("Authorization", "Bearer $token")
-                .header("apikey", SUPABASE_ANON_KEY)
+                .header("apikey", getSupabaseAnonKey())
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
                 .header("X-Client-Info", "android-delivery-app/1.0.0")
@@ -94,7 +101,7 @@ object NetworkModule {
         .build()
 
     val retrofit: Retrofit = Retrofit.Builder()
-        .baseUrl(BASE_URL)
+        .baseUrl(getBaseUrl())
         .client(okHttpClient)
         .addConverterFactory(MoshiConverterFactory.create(moshi))
         .build()

@@ -14,7 +14,11 @@ data class Product(
     val proteins: Double,
     val fats: Double,
     val carbs: Double,
-    val rating: Double = 4.8
+    val rating: Double = 4.8,
+    val oldPrice: Double? = null,
+    val stockStatus: String = "IN_STOCK", // "IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"
+    val isAvailable: Boolean = true,
+    val badges: List<String> = emptyList() // List of e.g. PREMIUM, BEST_PRICE, NEW, TOP_SELLER, LOCAL, ORGANIC
 ) : Serializable
 
 val PREDEFINED_PRODUCTS = listOf(
